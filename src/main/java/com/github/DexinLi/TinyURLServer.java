@@ -184,7 +184,7 @@ public class TinyURLServer extends AbstractVerticle {
     }
 
     private void createRedirection(HttpServerResponse response, String address) {
-        response.setStatusCode(301).putHeader("Location", address).end();
+        response.setStatusCode(301).setStatusMessage("Moved Permanently").putHeader("Location", address).end();
     }
 
     protected void response404(HttpServerResponse response) {
