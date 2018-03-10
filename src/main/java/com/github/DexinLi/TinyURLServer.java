@@ -59,7 +59,7 @@ public class TinyURLServer extends AbstractVerticle {
             if (stringAsyncResult.succeeded()) {
                 String res = stringAsyncResult.result();
                 if (res != null) {
-                    createRedirection(response, address);
+                    responseSuccess(response, res);
                 } else {
                     getIdFromDB(response, address);
                 }
@@ -73,12 +73,16 @@ public class TinyURLServer extends AbstractVerticle {
         mongoClient.findOne(urlCollection, new JsonObject().put("address", address), idField, jsonObjectAsyncResult -> {
             if (jsonObjectAsyncResult.succeeded()) {
                 JsonObject res = jsonObjectAsyncResult.result();
-                String id = res.getString("ID");
-                if (id == null) {
+                if (res == null) {
                     generateId(response, address);
                 } else {
-                    putToRedis(address, id);
-                    responseSuccess(response, id);
+                    String id = res.getString("ID");
+                    if (id == null) {
+                        generateId(response, address);
+                    } else {
+                        putToRedis(address, id);
+                        responseSuccess(response, id);
+                    }
                 }
             } else {
                 //TODO log here
@@ -148,7 +152,7 @@ public class TinyURLServer extends AbstractVerticle {
             if (stringAsyncResult.succeeded()) {
                 String res = stringAsyncResult.result();
                 if (res != null) {
-                    responseSuccess(response, id);
+                    createRedirection(response, res);
                 } else {
                     getAddressFromDB(response, id);
                 }
@@ -167,15 +171,19 @@ public class TinyURLServer extends AbstractVerticle {
     }
 
     protected void getAddressFromDB(HttpServerResponse response, String id) {
-        mongoClient.findOne(urlCollection, new JsonObject().put("ID", id), new JsonObject(), jsonObjectAsyncResult -> {
+        mongoClient.findOne(urlCollection, new JsonObject().put("ID", id), addressField, jsonObjectAsyncResult -> {
             if (jsonObjectAsyncResult.succeeded()) {
                 JsonObject res = jsonObjectAsyncResult.result();
-                String address = res.getString("address");
-                if (address != null) {
-                    putToRedis(id, address);
-                    createRedirection(response, address);
-                } else {
+                if (res == null) {
                     response404(response);
+                } else {
+                    String address = res.getString("address");
+                    if (address != null) {
+                        putToRedis(id, address);
+                        createRedirection(response, address);
+                    } else {
+                        response404(response);
+                    }
                 }
             } else {
                 //TODO log
